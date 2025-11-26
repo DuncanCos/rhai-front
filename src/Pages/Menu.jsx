@@ -9,21 +9,16 @@ function Menu() {
 
     return (
         <>
-            <div>
-                COUCOU
+            <div className='h-full w-full flex flex-col'>
+                Menu
+
+                <div className='flex justify-between h-full'>
+                    <button className='btn btn-primary w-1/3 h-full'>Nouveau job</button>
+                    <button className='btn btn-primary w-1/3 h-full'>Rechercher jobs</button>
+                    <button className='btn btn-secondary w-1/3 h-full'>historique</button>
+                </div>
             </div>
-            <h1>Vite + React</h1>
-            <div className="card">
-                <button onClick={() => setCount((count) => count + 1)}>
-                    count is {count}
-                </button>
-                <p>
-                    Edit <code>src/App.jsx</code> and save to test HMR
-                </p>
-            </div>
-            <p className="read-the-docs">
-                Click on the Vite and React logos to learn more
-            </p>
+
         </>
     )
 }
