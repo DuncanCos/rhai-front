@@ -2,10 +2,29 @@
 
 import { useState } from 'react'
 
-
+import { useNavigate } from "react-router";
 
 function Menu() {
-    const [count, setCount] = useState(0)
+    const [userRolesTest, setUserRolesTest] = useState("recruteur")
+    const navigate = useNavigate();
+
+    const handleCandidature = () => {
+        console.log(userRolesTest)
+        if (userRolesTest == "user") {
+            navigate("/jobs-candidat-user-list");
+        } else {
+            navigate("/jobs-candidat-recruteur-list");
+        }
+    }
+
+    const handleSearchJob = () => {
+        if (userRolesTest == "user") {
+            navigate("/jobs-lists");
+        } else {
+            navigate("/jobs-recruteur");
+        }
+    }
+
 
     return (
         <>
@@ -19,13 +38,13 @@ function Menu() {
                 <div className='flex flex-row gap-4 h-8/10 border-l border-base-900 border-2 '>
 
                     {/* Bouton 1 : flex-col pour mettre l'icône au dessus */}
-                    <button className='btn btn-primary shadow-md hover:shadow-lg transition duration-150 flex-1 flex flex-col gap-3 items-center justify-center text-xl h-full'>
+                    <button className='btn btn-primary shadow-md hover:shadow-lg transition duration-150 flex-1 flex flex-col gap-3 items-center justify-center text-xl h-full' onClick={handleCandidature}>
                         <span className="text-4xl">🚀</span>
                         <span>Nouveau Job</span>
                     </button>
 
                     {/* Bouton 2 */}
-                    <button className='btn btn-primary shadow-md hover:shadow-lg transition duration-150 flex-1 flex flex-col gap-3 items-center justify-center text-xl h-full'>
+                    <button className='btn btn-primary shadow-md hover:shadow-lg transition duration-150 flex-1 flex flex-col gap-3 items-center justify-center text-xl h-full' onClick={handleSearchJob}>
                         <span className="text-4xl">🔎</span>
                         <span>Rechercher Jobs</span>
                     </button>
