@@ -2,22 +2,21 @@ import React from 'react'
 import { Routes, Route } from 'react-router-dom'
 import Menu from '../Pages/Menu'
 import Login from '../Pages/Login'
-import JobsLists from '../Pages/JobsLists'
-import JobsRecruteur from '../Pages/JobsRecruteur'
-import JobsCandidatUserList from '../Pages/JobsCandidatUserList'
-import JobsCandidatRecruteurList from '../Pages/JobsCandidatRecruteurList'
+import JobsList from '../Pages/JobsList'
+import JobsManagement from '../Pages/JobsManagement'
+import AppliedJobs from '../Pages/AppliedJobs'
+import Candidates from '../Pages/Candidates'
 
 export default function Routing() {
     return (
         <div>
-
             <Routes>
                 <Route path="/" element={<Menu />} />
                 <Route path="/login" element={<Login />} />
-                <Route path="/jobs-lists" element={<JobsLists />} />
-                <Route path="/jobs-recruteur" element={<JobsRecruteur />} />
-                <Route path="/jobs-candidat-user-list" element={<JobsCandidatUserList />} />
-                <Route path="/jobs-candidat-recruteur-list" element={<JobsCandidatRecruteurList />} />
+                <Route path="/jobs" element={<JobsList />} />
+                <Route path="/recruiter/jobs" element={<JobsManagement />} />
+                <Route path="/user/applied-jobs" element={<AppliedJobs />} />
+                <Route path="/recruiter/candidates" element={<Candidates />} />
             </Routes>
         </div>
     )
