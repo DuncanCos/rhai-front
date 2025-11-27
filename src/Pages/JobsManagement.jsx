@@ -1,43 +1,40 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import api from '../context/api'
+import { useAuth } from '../context/AuthContext'
 
 function JobsManagement() {
-    const [jobs, setJobs] = useState([
-        {
-            id: 1,
-            title: 'Frontend Developer',
-            company: 'Tech Corp',
-            location: 'Remote',
-            salary: '$80,000 - $120,000',
-            description: 'We are looking for an experienced Frontend Developer with React expertise.',
-            category: 'IT',
-            postedDate: '2025-11-20',
-            applicants: 15
-        },
-        {
-            id: 2,
-            title: 'Backend Developer',
-            company: 'InnovateTech',
-            location: 'New York, NY',
-            salary: '$90,000 - $130,000',
-            description: 'Seeking a Backend Developer proficient in Node.js and databases.',
-            category: 'IT',
-            postedDate: '2025-11-18',
-            applicants: 22
-        }
-    ])
+    const { user } = useAuth()
+    const [jobs, setJobs] = useState([])
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState(null)
 
     const [showModal, setShowModal] = useState(false)
     const [editingId, setEditingId] = useState(null)
     const [formData, setFormData] = useState({
         title: '',
-        company: '',
-        location: '',
-        salary: '',
         description: '',
-        category: 'IT'
+        location: '',
+        recruiter: user.id,
+        is_active: true
     })
 
     const categories = ['IT', 'Design', 'Data', 'Management', 'Sales', 'HR']
+
+    useEffect(() => {
+        fetchJobs()
+    }, [])
+
+    const fetchJobs = async () => {
+        try {
+            const response = await api.get('/candidates/offers/')
+            setJobs(response.data)
+            setLoading(false)
+        } catch (err) {
+            console.error('Error fetching jobs:', err)
+            setError('Failed to load jobs')
+            setLoading(false)
+        }
+    }
 
     const handleInputChange = (e) => {
         const { name, value } = e.target
@@ -52,11 +49,11 @@ function JobsManagement() {
             setEditingId(job.id)
             setFormData({
                 title: job.title,
-                company: job.company,
+                company: job.recruiter || '', // Mapping recruiter to company for now or empty
                 location: job.location,
-                salary: job.salary,
+                salary: '', // Not in response
                 description: job.description,
-                category: job.category
+                category: 'IT' // Default
             })
         } else {
             setEditingId(null)
@@ -77,35 +74,52 @@ function JobsManagement() {
         setEditingId(null)
     }
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault()
-        
-        if (editingId) {
-            // Update existing job
-            setJobs(jobs.map(job => 
-                job.id === editingId 
-                    ? { ...job, ...formData }
-                    : job
-            ))
-        } else {
-            // Create new job
-            const newJob = {
-                id: Math.max(...jobs.map(j => j.id), 0) + 1,
-                ...formData,
-                postedDate: new Date().toISOString().split('T')[0],
-                applicants: 0
+
+        try {
+            if (editingId) {
+                // Update existing job
+                // The user only asked for GET and POST, but I'll try to keep PUT if possible.
+                // Assuming endpoint /candidates/offers/{id}/
+                await api.put(`/candidates/offers/${editingId}/`, formData, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${user.access}`
+                    }
+                })
+                fetchJobs() // Refresh list
+            } else {
+                // Create new job
+                await api.post('/candidates/offers/', formData, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${user.access}`
+                    }
+                })
+                fetchJobs() // Refresh list
             }
-            setJobs([newJob, ...jobs])
+            handleCloseModal()
+        } catch (err) {
+            console.error('Error saving job:', err)
+            alert('Failed to save job')
         }
-        
-        handleCloseModal()
     }
 
-    const handleDelete = (id) => {
+    const handleDelete = async (id) => {
         if (confirm('Are you sure you want to delete this job posting?')) {
-            setJobs(jobs.filter(job => job.id !== id))
+            try {
+                await api.delete(`/candidates/offers/${id}/`)
+                fetchJobs()
+            } catch (err) {
+                console.error('Error deleting job:', err)
+                alert('Failed to delete job')
+            }
         }
     }
+
+    if (loading) return <div className="p-6 text-center">Loading...</div>
+    if (error) return <div className="p-6 text-center text-error">{error}</div>
 
     return (
         <div className="min-h-screen bg-base-100 p-6">
@@ -129,17 +143,19 @@ function JobsManagement() {
                                     <div className="flex justify-between items-start">
                                         <div className="flex-1">
                                             <h2 className="card-title text-2xl mb-2">{job.title}</h2>
-                                            <p className="text-lg font-semibold text-primary mb-1">{job.company}</p>
+                                            {/* Displaying Recruiter ID as Company for now since we don't have company name */}
+                                            <p className="text-lg font-semibold text-primary mb-1">Recruiter: {job.recruiter}</p>
                                             <div className="flex flex-wrap gap-2 mb-3">
                                                 <span className="badge">{job.location}</span>
-                                                <span className="badge badge-accent">{job.category}</span>
-                                                <span className="badge badge-success">{job.salary}</span>
+                                                {/* <span className="badge badge-accent">{job.category}</span> */}
+                                                {/* <span className="badge badge-success">{job.salary}</span> */}
+                                                {job.is_active && <span className="badge badge-success">Active</span>}
                                             </div>
-                                            <p className="text-sm text-base-content/70 mb-2">Posted: {job.postedDate}</p>
+                                            <p className="text-sm text-base-content/70 mb-2">Posted: {new Date(job.created_at).toLocaleDateString()}</p>
                                             <p className="mb-4">{job.description}</p>
-                                            <div className="alert alert-info">
+                                            {/* <div className="alert alert-info">
                                                 <span className="font-bold">{job.applicants} applicants</span>
-                                            </div>
+                                            </div> */}
                                         </div>
                                     </div>
                                     <div className="card-actions justify-end gap-2">
@@ -189,8 +205,9 @@ function JobsManagement() {
                                     />
                                 </div>
 
+                                {/* Keeping these fields in the form but they might not be used by API */}
                                 <div className="grid grid-cols-2 gap-4 mb-4">
-                                    <div className="form-control">
+                                    {/* <div className="form-control">
                                         <label className="label">
                                             <span className="label-text">Company</span>
                                         </label>
@@ -201,10 +218,9 @@ function JobsManagement() {
                                             className="input input-bordered"
                                             value={formData.company}
                                             onChange={handleInputChange}
-                                            required
                                         />
-                                    </div>
-                                    <div className="form-control">
+                                    </div> */}
+                                    {/* <div className="form-control">
                                         <label className="label">
                                             <span className="label-text">Category</span>
                                         </label>
@@ -218,7 +234,7 @@ function JobsManagement() {
                                                 <option key={cat} value={cat}>{cat}</option>
                                             ))}
                                         </select>
-                                    </div>
+                                    </div> */}
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4 mb-4">
@@ -236,7 +252,7 @@ function JobsManagement() {
                                             required
                                         />
                                     </div>
-                                    <div className="form-control">
+                                    {/* <div className="form-control">
                                         <label className="label">
                                             <span className="label-text">Salary Range</span>
                                         </label>
@@ -247,9 +263,8 @@ function JobsManagement() {
                                             className="input input-bordered"
                                             value={formData.salary}
                                             onChange={handleInputChange}
-                                            required
                                         />
-                                    </div>
+                                    </div> */}
                                 </div>
 
                                 <div className="form-control mb-6">

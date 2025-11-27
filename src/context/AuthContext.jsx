@@ -1,4 +1,5 @@
 import { createContext, useState, useContext, useEffect } from 'react';
+import api from './api';
 
 const AuthContext = createContext(null);
 
@@ -20,7 +21,18 @@ export const AuthProvider = ({ children }) => {
         setLoading(false);
     }, []);
 
-    const login = async (email, password) => {
+    const login = async (username, password) => {
+        try {
+            const response = await api.post('/accounts/login/', { username, password });
+            console.log(response.data);
+            setUser(response.data);
+            localStorage.setItem('user', JSON.stringify(response.data));
+            return response.data;
+        } catch (error) {
+            console.error('Erreur lors de la connexion :', error);
+            throw error;
+        }
+
         // TODO: Replace with actual API call
         // Example:
         // const response = await fetch('YOUR_API_URL/login', {

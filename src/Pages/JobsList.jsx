@@ -1,79 +1,77 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import api from '../context/api'
+import ApplyModal from '../Components/ApplyModal'
 
 function JobsList() {
-    const [jobs, setJobs] = useState([
-        {
-            id: 1,
-            title: 'Frontend Developer',
-            company: 'Tech Corp',
-            location: 'Remote',
-            salary: '$80,000 - $120,000',
-            description: 'We are looking for an experienced Frontend Developer with React expertise.',
-            category: 'IT',
-            postedDate: '2025-11-20'
-        },
-        {
-            id: 2,
-            title: 'Backend Developer',
-            company: 'InnovateTech',
-            location: 'New York, NY',
-            salary: '$90,000 - $130,000',
-            description: 'Seeking a Backend Developer proficient in Node.js and databases.',
-            category: 'IT',
-            postedDate: '2025-11-18'
-        },
-        {
-            id: 3,
-            title: 'UI/UX Designer',
-            company: 'Design Studio',
-            location: 'San Francisco, CA',
-            salary: '$70,000 - $110,000',
-            description: 'Join our design team to create amazing user experiences.',
-            category: 'Design',
-            postedDate: '2025-11-15'
-        },
-        {
-            id: 4,
-            title: 'Data Scientist',
-            company: 'DataViz Inc',
-            location: 'Boston, MA',
-            salary: '$100,000 - $150,000',
-            description: 'Help us extract insights from large datasets using machine learning.',
-            category: 'Data',
-            postedDate: '2025-11-12'
-        },
-        {
-            id: 5,
-            title: 'Project Manager',
-            company: 'EnterpriseSoft',
-            location: 'Remote',
-            salary: '$85,000 - $125,000',
-            description: 'Lead cross-functional teams and deliver projects on time.',
-            category: 'Management',
-            postedDate: '2025-11-10'
-        }
-    ])
+    const [jobs, setJobs] = useState([])
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState(null)
 
     const [searchTerm, setSearchTerm] = useState('')
-    const [selectedCategory, setSelectedCategory] = useState('All')
     const [appliedJobs, setAppliedJobs] = useState([])
+    const [selectedJob, setSelectedJob] = useState(null)
 
-    const categories = ['All', 'IT', 'Design', 'Data', 'Management']
+    useEffect(() => {
+        const fetchJobs = async () => {
+            try {
+                const response = await api.get('/candidates/offers/')
+                // Map backend data to frontend structure
+                const mappedJobs = response.data.map(job => ({
+                    id: job.id,
+                    title: job.title,
+                    location: job.location || 'Remote',
+                    description: job.description,
+                    postedDate: new Date(job.created_at).toLocaleDateString()
+                }))
+                setJobs(mappedJobs)
+                setLoading(false)
+            } catch (err) {
+                console.error('Error fetching jobs:', err)
+                setError('Failed to load jobs. Please try again later.')
+                setLoading(false)
+            }
+        }
+
+        fetchJobs()
+    }, [])
 
     const filteredJobs = jobs.filter(job => {
-        const matchesSearch = job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            job.company.toLowerCase().includes(searchTerm.toLowerCase())
-        const matchesCategory = selectedCategory === 'All' || job.category === selectedCategory
-        return matchesSearch && matchesCategory
+        return job.title.toLowerCase().includes(searchTerm.toLowerCase())
     })
 
-    const handleApplyJob = (jobId) => {
-        if (!appliedJobs.includes(jobId)) {
-            setAppliedJobs([...appliedJobs, jobId])
-            alert('Successfully applied for this job!')
-        } else {
+    const handleApplyClick = (job) => {
+        if (appliedJobs.includes(job.id)) {
             alert('You have already applied for this job.')
+            return
         }
+        setSelectedJob(job)
+    }
+
+    const handleCloseModal = () => {
+        setSelectedJob(null)
+    }
+
+    const handleApplicationSuccess = (jobId) => {
+        setAppliedJobs([...appliedJobs, jobId])
+    }
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-base-100 p-6 flex justify-center items-center">
+                <span className="loading loading-spinner loading-lg"></span>
+            </div>
+        )
+    }
+
+    if (error) {
+        return (
+            <div className="min-h-screen bg-base-100 p-6 flex justify-center items-center">
+                <div className="alert alert-error max-w-md">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <span>{error}</span>
+                </div>
+            </div>
+        )
     }
 
     return (
@@ -82,26 +80,15 @@ function JobsList() {
                 <h1 className="text-4xl font-bold mb-8 text-center">Job Listings</h1>
 
                 {/* Search and Filter Section */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                    <div className="md:col-span-2">
+                <div className="grid grid-cols-1 gap-4 mb-8">
+                    <div>
                         <input
                             type="text"
-                            placeholder="Search jobs by title or company..."
+                            placeholder="Search jobs by title..."
                             className="input input-bordered w-full"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
-                    </div>
-                    <div>
-                        <select
-                            className="select select-bordered w-full"
-                            value={selectedCategory}
-                            onChange={(e) => setSelectedCategory(e.target.value)}
-                        >
-                            {categories.map(cat => (
-                                <option key={cat} value={cat}>{cat}</option>
-                            ))}
-                        </select>
                     </div>
                 </div>
 
@@ -114,11 +101,8 @@ function JobsList() {
                                     <div className="flex justify-between items-start gap-4">
                                         <div className="flex-1">
                                             <h2 className="card-title text-2xl mb-2">{job.title}</h2>
-                                            <p className="text-lg font-semibold text-primary mb-1">{job.company}</p>
                                             <div className="flex flex-wrap gap-3 mb-3">
                                                 <span className="badge badge-lg">{job.location}</span>
-                                                <span className="badge badge-lg badge-accent">{job.category}</span>
-                                                <span className="badge badge-lg badge-success">{job.salary}</span>
                                             </div>
                                             <p className="text-sm text-base-content/70 mb-3">Posted: {job.postedDate}</p>
                                             <p className="mb-4">{job.description}</p>
@@ -127,7 +111,7 @@ function JobsList() {
                                     <div className="card-actions justify-end gap-2">
                                         <button
                                             className={`btn ${appliedJobs.includes(job.id) ? 'btn-disabled' : 'btn-primary'}`}
-                                            onClick={() => handleApplyJob(job.id)}
+                                            onClick={() => handleApplyClick(job)}
                                         >
                                             {appliedJobs.includes(job.id) ? '✓ Applied' : 'Apply Now'}
                                         </button>
@@ -149,6 +133,15 @@ function JobsList() {
                     </p>
                 </div>
             </div>
+
+            {/* Application Modal */}
+            {selectedJob && (
+                <ApplyModal
+                    job={selectedJob}
+                    onClose={handleCloseModal}
+                    onSuccess={handleApplicationSuccess}
+                />
+            )}
         </div>
     )
 }

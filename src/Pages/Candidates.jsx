@@ -1,68 +1,10 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import api from '../context/api'
 
 function Candidates() {
-    const [candidates, setCandidates] = useState([
-        {
-            id: 1,
-            name: 'John Smith',
-            email: 'john.smith@email.com',
-            phone: '+1 (555) 123-4567',
-            position: 'Frontend Developer',
-            appliedDate: '2025-11-22',
-            status: 'Reviewing',
-            experience: '5 years',
-            skills: ['React', 'JavaScript', 'CSS', 'HTML'],
-            rating: 4.5
-        },
-        {
-            id: 2,
-            name: 'Sarah Johnson',
-            email: 'sarah.j@email.com',
-            phone: '+1 (555) 234-5678',
-            position: 'Backend Developer',
-            appliedDate: '2025-11-21',
-            status: 'Interviewed',
-            experience: '7 years',
-            skills: ['Node.js', 'MongoDB', 'PostgreSQL', 'REST API'],
-            rating: 4.8
-        },
-        {
-            id: 3,
-            name: 'Michael Chen',
-            email: 'm.chen@email.com',
-            phone: '+1 (555) 345-6789',
-            position: 'Frontend Developer',
-            appliedDate: '2025-11-20',
-            status: 'Rejected',
-            experience: '2 years',
-            skills: ['React', 'Vue.js', 'JavaScript'],
-            rating: 3.2
-        },
-        {
-            id: 4,
-            name: 'Emma Davis',
-            email: 'emma.d@email.com',
-            phone: '+1 (555) 456-7890',
-            position: 'UI/UX Designer',
-            appliedDate: '2025-11-19',
-            status: 'Shortlisted',
-            experience: '4 years',
-            skills: ['Figma', 'Adobe XD', 'Prototyping', 'User Research'],
-            rating: 4.7
-        },
-        {
-            id: 5,
-            name: 'David Wilson',
-            email: 'david.w@email.com',
-            phone: '+1 (555) 567-8901',
-            position: 'Backend Developer',
-            appliedDate: '2025-11-18',
-            status: 'Accepted',
-            experience: '8 years',
-            skills: ['Java', 'Spring Boot', 'MySQL', 'AWS'],
-            rating: 4.9
-        }
-    ])
+    const [candidates, setCandidates] = useState([])
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState(null)
 
     const [filterStatus, setFilterStatus] = useState('All')
     const [filterPosition, setFilterPosition] = useState('All')
@@ -70,43 +12,66 @@ function Candidates() {
     const [selectedCandidate, setSelectedCandidate] = useState(null)
     const [showDetails, setShowDetails] = useState(false)
 
-    const statusOptions = ['All', 'Reviewing', 'Interviewed', 'Shortlisted', 'Accepted', 'Rejected']
-    const positions = ['All', ...new Set(candidates.map(c => c.position))]
+    const statusOptions = ['All', 'new', 'in_review', 'accepted', 'rejected']
+
+    useEffect(() => {
+        fetchCandidates()
+    }, [])
+
+    const fetchCandidates = async () => {
+        try {
+            const response = await api.get('/candidates/applications/')
+            setCandidates(response.data)
+            setLoading(false)
+        } catch (err) {
+            console.error("Error fetching candidates:", err)
+            setError("Failed to load candidates")
+            setLoading(false)
+        }
+    }
+
+    const positions = ['All', ...new Set(candidates.map(c => c.job_title).filter(Boolean))]
 
     const getStatusBadgeColor = (status) => {
         switch (status) {
-            case 'Reviewing':
+            case 'new':
+                return 'badge-neutral'
+            case 'in_review':
                 return 'badge-warning'
-            case 'Interviewed':
-                return 'badge-info'
-            case 'Shortlisted':
-                return 'badge-accent'
-            case 'Accepted':
+            case 'accepted':
                 return 'badge-success'
-            case 'Rejected':
+            case 'rejected':
                 return 'badge-error'
             default:
-                return 'badge-neutral'
+                return 'badge-ghost'
         }
+    }
+
+    const formatStatus = (status) => {
+        if (!status) return ''
+        return status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())
     }
 
     let filteredCandidates = candidates.filter(candidate => {
         const matchesStatus = filterStatus === 'All' || candidate.status === filterStatus
-        const matchesPosition = filterPosition === 'All' || candidate.position === filterPosition
-        const matchesSearch = candidate.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            candidate.email.toLowerCase().includes(searchTerm.toLowerCase())
+        const matchesPosition = filterPosition === 'All' || candidate.job_title === filterPosition
+        const matchesSearch = (candidate.candidate_username && candidate.candidate_username.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (candidate.candidate_email && candidate.candidate_email.toLowerCase().includes(searchTerm.toLowerCase()))
         return matchesStatus && matchesPosition && matchesSearch
     })
 
-    const handleStatusChange = (id, newStatus) => {
-        setCandidates(candidates.map(c =>
-            c.id === id ? { ...c, status: newStatus } : c
-        ))
-    }
-
-    const handleDelete = (id) => {
-        if (confirm('Are you sure you want to remove this candidate?')) {
-            setCandidates(candidates.filter(c => c.id !== id))
+    const handleStatusChange = async (id, newStatus) => {
+        try {
+            await api.patch(`/candidates/applications/${id}/status/`, { status: newStatus })
+            setCandidates(candidates.map(c =>
+                c.id === id ? { ...c, status: newStatus } : c
+            ))
+            if (selectedCandidate && selectedCandidate.id === id) {
+                setSelectedCandidate({ ...selectedCandidate, status: newStatus })
+            }
+        } catch (err) {
+            console.error("Error updating status:", err)
+            alert("Failed to update status")
         }
     }
 
@@ -122,11 +87,14 @@ function Candidates() {
 
     const stats = {
         total: candidates.length,
-        reviewing: candidates.filter(c => c.status === 'Reviewing').length,
-        interviewed: candidates.filter(c => c.status === 'Interviewed').length,
-        shortlisted: candidates.filter(c => c.status === 'Shortlisted').length,
-        accepted: candidates.filter(c => c.status === 'Accepted').length
+        new: candidates.filter(c => c.status === 'new').length,
+        in_review: candidates.filter(c => c.status === 'in_review').length,
+        accepted: candidates.filter(c => c.status === 'accepted').length,
+        rejected: candidates.filter(c => c.status === 'rejected').length
     }
+
+    if (loading) return <div className="p-6 text-center">Loading candidates...</div>
+    if (error) return <div className="p-6 text-center text-error">{error}</div>
 
     return (
         <div className="min-h-screen bg-base-100 p-6">
@@ -140,20 +108,20 @@ function Candidates() {
                         <div className="stat-value text-2xl">{stats.total}</div>
                     </div>
                     <div className="stat bg-base-200 rounded-lg">
-                        <div className="stat-title">Reviewing</div>
-                        <div className="stat-value text-xl text-warning">{stats.reviewing}</div>
+                        <div className="stat-title">New</div>
+                        <div className="stat-value text-xl">{stats.new}</div>
                     </div>
                     <div className="stat bg-base-200 rounded-lg">
-                        <div className="stat-title">Interviewed</div>
-                        <div className="stat-value text-xl text-info">{stats.interviewed}</div>
-                    </div>
-                    <div className="stat bg-base-200 rounded-lg">
-                        <div className="stat-title">Shortlisted</div>
-                        <div className="stat-value text-xl text-accent">{stats.shortlisted}</div>
+                        <div className="stat-title">In Review</div>
+                        <div className="stat-value text-xl text-warning">{stats.in_review}</div>
                     </div>
                     <div className="stat bg-base-200 rounded-lg">
                         <div className="stat-title">Accepted</div>
                         <div className="stat-value text-xl text-success">{stats.accepted}</div>
+                    </div>
+                    <div className="stat bg-base-200 rounded-lg">
+                        <div className="stat-title">Rejected</div>
+                        <div className="stat-value text-xl text-error">{stats.rejected}</div>
                     </div>
                 </div>
 
@@ -186,7 +154,7 @@ function Candidates() {
                             onChange={(e) => setFilterStatus(e.target.value)}
                         >
                             {statusOptions.map(status => (
-                                <option key={status} value={status}>{status}</option>
+                                <option key={status} value={status}>{formatStatus(status) || 'All Status'}</option>
                             ))}
                         </select>
                     </div>
@@ -201,7 +169,7 @@ function Candidates() {
                                 <th>Position</th>
                                 <th>Applied Date</th>
                                 <th>Status</th>
-                                <th>Rating</th>
+                                <th>Score</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -209,19 +177,21 @@ function Candidates() {
                             {filteredCandidates.length > 0 ? (
                                 filteredCandidates.map(candidate => (
                                     <tr key={candidate.id} className="hover:bg-base-100">
-                                        <td className="font-semibold">{candidate.name}</td>
-                                        <td>{candidate.position}</td>
-                                        <td>{candidate.appliedDate}</td>
+                                        <td className="font-semibold">{candidate.candidate_username}</td>
+                                        <td>{candidate.job_title}</td>
+                                        <td>{new Date(candidate.created_at).toLocaleDateString()}</td>
                                         <td>
                                             <div className={`badge badge-lg ${getStatusBadgeColor(candidate.status)}`}>
-                                                {candidate.status}
+                                                {formatStatus(candidate.status)}
                                             </div>
                                         </td>
                                         <td>
-                                            <div className="flex items-center gap-1">
-                                                <span className="text-yellow-500">★</span>
-                                                {candidate.rating}
-                                            </div>
+                                            {candidate.score !== null ? (
+                                                <div className="flex items-center gap-1">
+                                                    <span className="text-yellow-500">★</span>
+                                                    {candidate.score}
+                                                </div>
+                                            ) : 'N/A'}
                                         </td>
                                         <td>
                                             <div className="flex gap-2">
@@ -237,15 +207,9 @@ function Candidates() {
                                                     onChange={(e) => handleStatusChange(candidate.id, e.target.value)}
                                                 >
                                                     {statusOptions.filter(s => s !== 'All').map(status => (
-                                                        <option key={status} value={status}>{status}</option>
+                                                        <option key={status} value={status}>{formatStatus(status)}</option>
                                                     ))}
                                                 </select>
-                                                <button
-                                                    className="btn btn-sm btn-error"
-                                                    onClick={() => handleDelete(candidate.id)}
-                                                >
-                                                    Delete
-                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -265,61 +229,61 @@ function Candidates() {
                 {showDetails && selectedCandidate && (
                     <div className="modal modal-open">
                         <div className="modal-box w-11/12 max-w-2xl">
-                            <h3 className="font-bold text-lg mb-4">{selectedCandidate.name}</h3>
-                            
+                            <h3 className="font-bold text-lg mb-4">{selectedCandidate.candidate_username}</h3>
+
                             <div className="space-y-4">
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <p className="text-sm text-base-content/70">Email</p>
-                                        <p className="font-semibold">{selectedCandidate.email}</p>
+                                        <p className="font-semibold">{selectedCandidate.candidate_email || 'N/A'}</p>
                                     </div>
                                     <div>
-                                        <p className="text-sm text-base-content/70">Phone</p>
-                                        <p className="font-semibold">{selectedCandidate.phone}</p>
+                                        <p className="text-sm text-base-content/70">Applied Date</p>
+                                        <p className="font-semibold">{new Date(selectedCandidate.created_at).toLocaleDateString()}</p>
                                     </div>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <p className="text-sm text-base-content/70">Position Applied</p>
-                                        <p className="font-semibold">{selectedCandidate.position}</p>
+                                        <p className="font-semibold">{selectedCandidate.job_title}</p>
                                     </div>
                                     <div>
-                                        <p className="text-sm text-base-content/70">Experience</p>
-                                        <p className="font-semibold">{selectedCandidate.experience}</p>
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <p className="text-sm text-base-content/70">Applied Date</p>
-                                        <p className="font-semibold">{selectedCandidate.appliedDate}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-base-content/70">Rating</p>
+                                        <p className="text-sm text-base-content/70">Score</p>
                                         <p className="font-semibold">
-                                            <span className="text-yellow-500">★</span> {selectedCandidate.rating}/5
+                                            {selectedCandidate.score !== null ? (
+                                                <>
+                                                    <span className="text-yellow-500">★</span> {selectedCandidate.score}
+                                                </>
+                                            ) : 'N/A'}
                                         </p>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <p className="text-sm text-base-content/70 mb-2">Skills</p>
-                                    <div className="flex flex-wrap gap-2">
-                                        {selectedCandidate.skills.map((skill, idx) => (
-                                            <span key={idx} className="badge badge-primary">
-                                                {skill}
-                                            </span>
-                                        ))}
                                     </div>
                                 </div>
 
                                 <div>
                                     <p className="text-sm text-base-content/70 mb-2">Current Status</p>
                                     <div className={`badge badge-lg ${getStatusBadgeColor(selectedCandidate.status)}`}>
-                                        {selectedCandidate.status}
+                                        {formatStatus(selectedCandidate.status)}
                                     </div>
                                 </div>
+
+                                {selectedCandidate.cover_letter && (
+                                    <div>
+                                        <p className="text-sm text-base-content/70 mb-2">Cover Letter</p>
+                                        <div className="bg-base-200 p-4 rounded-lg text-sm">
+                                            {selectedCandidate.cover_letter}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {selectedCandidate.cv_file && (
+                                    <div>
+                                        <p className="text-sm text-base-content/70 mb-2">CV</p>
+                                        <a href={selectedCandidate.cv_file} target="_blank" rel="noopener noreferrer" className="link link-primary">
+                                            Download CV
+                                        </a>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="modal-action">
