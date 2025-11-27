@@ -1,6 +1,26 @@
 import React from 'react'
+import { useNavigate } from 'react-router-dom';
+import api from '../context/api';
+import { useState } from 'react';
+import { useContext } from 'react';
+import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
+    const { login } = useAuth();
+    const navigate = useNavigate();
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
+
+    const handleLogin = async () => {
+        try {
+            setError('');
+            await login(email, password);
+            navigate('/');
+        } catch (err) {
+            setError('Échec de la connexion. Vérifiez vos identifiants.');
+        }
+    };
     return (
         // Conteneur principal (Centré verticalement et horizontalement)
         <div className="hero min-h-screen bg-base-200">
@@ -14,7 +34,8 @@ export default function Login() {
 
                 {/* La Carte de Login */}
                 <div className="card shrink-0 w-full max-w-sm shadow-2xl bg-base-100">
-                    <form className="card-body">
+                    <div className="card-body">
+                        {error && <div className="alert alert-error">{error}</div>}
 
                         {/* Champ Email */}
                         <div className="form-control">
@@ -22,10 +43,12 @@ export default function Login() {
                                 <span className="label-text">Email</span>
                             </label>
                             <input
-                                type="email"
-                                placeholder="email@exemple.com"
+                                type="text"
+                                placeholder="username"
                                 className="input input-bordered"
                                 required
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
                             />
                         </div>
 
@@ -39,6 +62,8 @@ export default function Login() {
                                 placeholder="Votre mot de passe"
                                 className="input input-bordered"
                                 required
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
                             />
                             <label className="label">
                                 <a href="#" className="label-text-alt link link-hover">
@@ -49,7 +74,7 @@ export default function Login() {
 
                         {/* Bouton d'action */}
                         <div className="form-control mt-6">
-                            <button className="btn btn-primary">Se connecter</button>
+                            <button className="btn btn-primary" onClick={handleLogin}>Se connecter</button>
                         </div>
 
                         {/* Lien d'inscription (Footer de la carte) */}
@@ -58,7 +83,7 @@ export default function Login() {
                             <a href="#" className="link link-primary text-sm">S'inscrire</a>
                         </div>
 
-                    </form>
+                    </div>
                 </div>
             </div>
         </div>

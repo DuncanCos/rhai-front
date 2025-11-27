@@ -1,69 +1,72 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import api from '../context/api'
 
 function AppliedJobs() {
-    const [appliedJobs, setAppliedJobs] = useState([
-        {
-            id: 1,
-            jobTitle: 'Frontend Developer',
-            company: 'Tech Corp',
-            location: 'Remote',
-            salary: '$80,000 - $120,000',
-            appliedDate: '2025-11-22',
-            status: 'Pending',
-            description: 'React Developer position'
-        },
-        {
-            id: 2,
-            jobTitle: 'UI/UX Designer',
-            company: 'Design Studio',
-            location: 'San Francisco, CA',
-            salary: '$70,000 - $110,000',
-            appliedDate: '2025-11-21',
-            status: 'Interviewing',
-            description: 'Create amazing user experiences'
-        },
-        {
-            id: 3,
-            jobTitle: 'Data Scientist',
-            company: 'DataViz Inc',
-            location: 'Boston, MA',
-            salary: '$100,000 - $150,000',
-            appliedDate: '2025-11-20',
-            status: 'Rejected',
-            description: 'Machine learning and data analysis'
-        },
-        {
-            id: 4,
-            jobTitle: 'Backend Developer',
-            company: 'InnovateTech',
-            location: 'New York, NY',
-            salary: '$90,000 - $130,000',
-            appliedDate: '2025-11-19',
-            status: 'Accepted',
-            description: 'Node.js and database expert needed'
-        },
-        {
-            id: 5,
-            jobTitle: 'Project Manager',
-            company: 'EnterpriseSoft',
-            location: 'Remote',
-            salary: '$85,000 - $125,000',
-            appliedDate: '2025-11-18',
-            status: 'Pending',
-            description: 'Lead cross-functional teams'
+    const [appliedJobs, setAppliedJobs] = useState([])
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState(null)
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const userString = localStorage.getItem('user')
+                const user = userString ? JSON.parse(userString) : null
+                const userId = user?.user_id || user?.id
+
+                if (!userId) {
+                    console.warn('User ID not found, cannot filter applications.')
+                    // Depending on requirements, we might want to redirect or show empty
+                }
+
+                const [applicationsRes, jobsRes] = await Promise.all([
+                    api.get('/candidates/applications/'),
+                    api.get('/candidates/offers/')
+                ])
+
+                const applications = applicationsRes.data
+                const jobs = jobsRes.data
+
+                // Filter applications for the current user
+                const userApplications = applications.filter(app => app.candidate === userId)
+
+                // Map backend data to frontend structure, linking with job details
+                // Map backend data to frontend structure, linking with job details
+                const mappedApps = userApplications.map(app => {
+                    const job = jobs.find(j => j.id === app.job)
+                    return {
+                        id: app.id,
+                        jobTitle: job?.title || 'Unknown Job',
+                        candidateId: app.candidate,
+                        location: job?.location || 'Remote',
+                        score: app.score || 'N/A',
+                        appliedDate: app.created_at ? new Date(app.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+                        status: app.status || 'Pending',
+                        description: job?.description || ''
+                    }
+                })
+
+                setAppliedJobs(mappedApps)
+                setLoading(false)
+            } catch (err) {
+                console.error('Error fetching data:', err)
+                setError('Failed to load applications.')
+                setLoading(false)
+            }
         }
-    ])
+
+        fetchData()
+    }, [])
 
     const [filterStatus, setFilterStatus] = useState('All')
     const [sortBy, setSortBy] = useState('date')
 
-    const statusOptions = ['All', 'Pending', 'Interviewing', 'Accepted', 'Rejected']
+    const statusOptions = ['All', 'New', 'In review', 'Accepted', 'Rejected']
 
     const getStatusBadgeColor = (status) => {
         switch (status) {
-            case 'Pending':
+            case 'New':
                 return 'badge-warning'
-            case 'Interviewing':
+            case 'In review':
                 return 'badge-info'
             case 'Accepted':
                 return 'badge-success'
@@ -74,7 +77,7 @@ function AppliedJobs() {
         }
     }
 
-    let filteredJobs = appliedJobs.filter(job => 
+    let filteredJobs = appliedJobs.filter(job =>
         filterStatus === 'All' || job.status === filterStatus
     )
 
@@ -92,10 +95,28 @@ function AppliedJobs() {
         }
     }
 
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-base-100 p-6 flex justify-center items-center">
+                <span className="loading loading-spinner loading-lg"></span>
+            </div>
+        )
+    }
+
+    if (error) {
+        return (
+            <div className="min-h-screen bg-base-100 p-6 flex justify-center items-center">
+                <div className="alert alert-error max-w-md">
+                    <span>{error}</span>
+                </div>
+            </div>
+        )
+    }
+
     const stats = {
         total: appliedJobs.length,
-        pending: appliedJobs.filter(j => j.status === 'Pending').length,
-        interviewing: appliedJobs.filter(j => j.status === 'Interviewing').length,
+        new: appliedJobs.filter(j => j.status === 'New').length,
+        inReview: appliedJobs.filter(j => j.status === 'In review').length,
         accepted: appliedJobs.filter(j => j.status === 'Accepted').length,
         rejected: appliedJobs.filter(j => j.status === 'Rejected').length
     }
@@ -112,12 +133,12 @@ function AppliedJobs() {
                         <div className="stat-value text-2xl">{stats.total}</div>
                     </div>
                     <div className="stat bg-base-200 rounded-lg">
-                        <div className="stat-title">Pending</div>
-                        <div className="stat-value text-xl text-warning">{stats.pending}</div>
+                        <div className="stat-title">New</div>
+                        <div className="stat-value text-xl text-warning">{stats.new}</div>
                     </div>
                     <div className="stat bg-base-200 rounded-lg">
-                        <div className="stat-title">Interviewing</div>
-                        <div className="stat-value text-xl text-info">{stats.interviewing}</div>
+                        <div className="stat-title">In review</div>
+                        <div className="stat-value text-xl text-info">{stats.inReview}</div>
                     </div>
                     <div className="stat bg-base-200 rounded-lg">
                         <div className="stat-title">Accepted</div>
@@ -171,8 +192,12 @@ function AppliedJobs() {
                                         <div className="flex-1">
                                             <div className="flex items-start justify-between mb-2">
                                                 <div>
-                                                    <h2 className="card-title text-2xl mb-1">{job.jobTitle}</h2>
-                                                    <p className="text-lg font-semibold text-primary">{job.company}</p>
+                                                    <h2 className="card-title text-2xl mb-1">
+                                                        {job.jobTitle}
+                                                        <span className="text-sm font-normal text-base-content/60 ml-2">
+                                                            Candidate: {job.candidateId}
+                                                        </span>
+                                                    </h2>
                                                 </div>
                                                 <div className={`badge badge-lg ${getStatusBadgeColor(job.status)}`}>
                                                     {job.status}
@@ -180,7 +205,7 @@ function AppliedJobs() {
                                             </div>
                                             <div className="flex flex-wrap gap-2 mb-3">
                                                 <span className="badge">{job.location}</span>
-                                                <span className="badge badge-success">{job.salary}</span>
+                                                <span className="badge badge-success">Score: {job.score}</span>
                                             </div>
                                             <p className="text-sm text-base-content/70 mb-2">
                                                 Applied: {job.appliedDate}
