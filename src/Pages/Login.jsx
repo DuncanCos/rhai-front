@@ -21,6 +21,9 @@ export default function Login() {
             setError('Échec de la connexion. Vérifiez vos identifiants.');
         }
     };
+    const handleAdmin = () => {
+        navigate('http://localhost:8000/admin/');
+    };
     return (
         // Conteneur principal (Centré verticalement et horizontalement)
         <div className="hero min-h-screen bg-base-200">
@@ -40,7 +43,7 @@ export default function Login() {
                         {/* Champ Email */}
                         <div className="form-control">
                             <label className="label">
-                                <span className="label-text">Email</span>
+                                <span className="label-text">username</span>
                             </label>
                             <input
                                 type="text"
@@ -85,7 +88,9 @@ export default function Login() {
 
                     </div>
                 </div>
+                <button className='btn btn-primary' onClick={handleAdmin}>Mode Admin</button>
             </div>
+
         </div>
     )
 }

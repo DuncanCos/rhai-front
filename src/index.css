@@ -1,5 +1,5 @@
 @import "tailwindcss";
 
 @plugin "daisyui" {
-    themes: valentine --default, abyss --prefersdark, cupcake, dracula;
+    themes: valentine --default, aqua --prefersdark, cupcake, dracula;
 }
