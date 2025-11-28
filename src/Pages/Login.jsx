@@ -80,7 +80,7 @@ export default function Login() {
                         {/* Lien d'inscription (Footer de la carte) */}
                         <div className="text-center mt-4">
                             <span className="text-sm text-base-content/70">Pas encore de compte ? </span>
-                            <a href="#" className="link link-primary text-sm">S'inscrire</a>
+                            <a href="/register/candidate" className="link link-primary text-sm">S'inscrire</a>
                         </div>
 
                     </div>

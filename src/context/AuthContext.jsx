@@ -35,32 +35,20 @@ export const AuthProvider = ({ children }) => {
             console.error('Erreur lors de la connexion :', error);
             throw error;
         }
+    };
 
-        // TODO: Replace with actual API call
-        // Example:
-        // const response = await fetch('YOUR_API_URL/login', {
-        //   method: 'POST',
-        //   headers: { 'Content-Type': 'application/json' },
-        //   body: JSON.stringify({ email, password }),
-        // });
-        // if (!response.ok) throw new Error('Login failed');
-        // const data = await response.json();
-
-        // Mock login for now
-        console.log("Logging in with", email);
-
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        const mockUser = {
-            email,
-            name: "Utilisateur Test",
-            role: "user" // or 'recruiter'
-        };
-
-        setUser(mockUser);
-        localStorage.setItem('user', JSON.stringify(mockUser));
-        return mockUser;
+    const register = async (userData) => {
+        try {
+            const response = await api.post('/accounts/register/', userData);
+            console.log("Registration success:", response.data);
+            // Optionally log the user in immediately after registration
+            // setUser(response.data); 
+            // localStorage.setItem('user', JSON.stringify(response.data));
+            return response.data;
+        } catch (error) {
+            console.error('Erreur lors de l\'inscription :', error);
+            throw error;
+        }
     };
 
     const logout = () => {
@@ -71,7 +59,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, logout, loading }}>
+        <AuthContext.Provider value={{ user, login, register, logout, loading }}>
             {!loading && children}
         </AuthContext.Provider>
     );
