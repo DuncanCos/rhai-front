@@ -92,6 +92,7 @@ function AppliedJobs() {
     const handleWithdraw = (id) => {
         if (confirm('Are you sure you want to withdraw this application?')) {
             setAppliedJobs(appliedJobs.filter(job => job.id !== id))
+
         }
     }
 

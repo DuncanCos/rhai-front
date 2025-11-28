@@ -1,12 +1,22 @@
 
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 import { useNavigate } from "react-router";
+import { useAuth } from '../context/AuthContext';
 
 function Menu() {
     const [userRolesTest, setUserRolesTest] = useState("recruteur")
     const navigate = useNavigate();
+    const { user } = useAuth();
+
+    useEffect(() => {
+        if (user?.role == "candidate") {
+            navigate("/user/applied-jobs")
+        } else {
+            navigate("/recruiter/candidates")
+        }
+    }, [user]);
 
     const handleCandidature = () => {
         console.log(userRolesTest)

@@ -1,11 +1,14 @@
 import { createContext, useState, useContext, useEffect } from 'react';
 import api from './api';
+import { useNavigate } from "react-router";
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
+
+    const navigate = useNavigate();
 
     useEffect(() => {
         // Check for stored user/token on mount
@@ -63,6 +66,7 @@ export const AuthProvider = ({ children }) => {
     const logout = () => {
         setUser(null);
         localStorage.removeItem('user');
+        navigate('/login');
         // localStorage.removeItem('token');
     };
 
